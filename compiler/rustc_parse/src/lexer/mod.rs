@@ -264,8 +264,14 @@ impl<'a> StringReader<'a> {
 
             rustc_lexer::TokenKind::Unknown => {
                 let c = self.str_from(start).chars().next().unwrap();
-                let mut err =
-                    self.struct_fatal_span_char(start, self.pos, "unknown start of token", c);
+                let mut err = if unicode_chars::is_identifier_like(c) {
+                    self.sess.span_diagnostic.struct_span_fatal(
+                        self.mk_sp(start, self.pos),
+                        &format!("cannot use {} in an identifier", c),
+                    )
+                } else {
+                    self.struct_fatal_span_char(start, self.pos, "unknown start of token", c)
+                };
                 // FIXME: the lexer could be used to turn the ASCII version of unicode homoglyphs,
                 // instead of keeping a table in `check_for_substitution`into the token. Ideally,
                 // this should be inside `rustc_lexer`. However, we should first remove compound

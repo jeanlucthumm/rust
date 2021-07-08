@@ -5,6 +5,7 @@ use super::StringReader;
 use crate::token;
 use rustc_errors::{Applicability, DiagnosticBuilder};
 use rustc_span::{symbol::kw, BytePos, Pos, Span};
+use unic_ucd_category::GeneralCategory;
 
 #[rustfmt::skip] // for line breaks
 const UNICODE_ARRAY: &[(char, &str, char)] = &[
@@ -378,6 +379,17 @@ pub(super) fn check_for_substitution<'a>(
         err.span_suggestion(span, &msg, ascii_char.to_string(), Applicability::MaybeIncorrect);
     }
     token.clone()
+}
+
+// Determines whether a unicode character is likely to be used in an identifier, i.e. "identifier-like",
+// by checking its GeneralCategory unicode property.
+pub(super) fn is_identifier_like(c: char) -> bool {
+    match GeneralCategory::of(c) {
+        category if category.is_letter() || category.is_mark() => true,
+        // Includes emojis
+        GeneralCategory::OtherSymbol => true,
+        _ => false,
+    }
 }
 
 /// Extract string if found at current position with given delimiters
